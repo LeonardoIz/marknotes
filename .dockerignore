@@ -1,0 +1,8 @@
+# Only what the build needs: never your notes (data/), .env.local or node_modules.
+*
+!src/
+!public/
+!package.json
+!package-lock.json
+!next.config.ts
+!tsconfig.json

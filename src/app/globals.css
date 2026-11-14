@@ -1,0 +1,557 @@
+/* The marknotes theme: warm paper or warm black, hairline
+   rules instead of cards. Three typefaces: Lora for titles, Geist for the
+   interface, Geist Mono for labels and code. notes has its own accent
+   (--brand): change it here and only here.
+
+   Every color is light-dark(light, dark). With no data-theme on <html> it
+   follows the system; data-theme="light" or "dark" fixes it. */
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark {
+  &:where([data-theme="dark"], [data-theme="dark"] *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:where(:not([data-theme="light"], [data-theme="light"] *)) {
+      @slot;
+    }
+  }
+}
+
+@theme inline {
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --font-serif: var(--font-serif);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-popover: var(--card);
+  --color-secondary: var(--secondary);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-ring: var(--ring);
+  --color-brand: var(--brand);
+  --color-faint: var(--faint);
+  --color-rule: var(--rule);
+  --color-field: var(--field);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-info: var(--info);
+  --radius-sm: 0.1125rem;
+  --radius-md: 0.15rem;
+  --radius-lg: 0.1875rem;
+  --radius-xl: 0.2625rem;
+}
+
+:root {
+  color-scheme: light dark;
+  interpolate-size: allow-keywords; /* lets heights animate to and from auto */
+  --background: light-dark(#f5f3ee, #0f0e0d);
+  --foreground: light-dark(#1b1916, #f2f0ed);
+  --card: light-dark(#fbfaf7, #161412);
+  --secondary: light-dark(#ebe7e0, #1d1b19);
+  --muted-foreground: light-dark(#6e6862, #8f8983);
+  --destructive: light-dark(#c23f2c, #ef7a6a);
+  --border: light-dark(#d9d3ca, #2a2724);
+  --ring: var(--muted-foreground);
+  --brand: light-dark(#2c4f8c, #86a8e8);
+  --faint: light-dark(#9c958d, #6b655f);
+  --rule: light-dark(#e7e2da, #1d1b19);
+  --field: light-dark(#fbfaf7, #161412);
+  --ok: light-dark(#2c8a4e, #6fcf8e);
+  --warn: light-dark(#a8740f, #e8b04a);
+  --info: light-dark(#1f7a80, #6cc5c9);
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  /* Editor syntax colors, inside fenced code */
+  --c-keyword: light-dark(#b0384f, #ff8fa3);
+  --c-string: light-dark(#2c7a4b, #8fd9a8);
+  --c-number: light-dark(#3563ad, #8fb8f0);
+  --c-function: light-dark(#7a4bb0, #c9a8f0);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+/* The small uppercase mono label over lists, sections and fields. */
+@utility kicker {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.4;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted-foreground);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    scrollbar-gutter: stable;
+    scrollbar-color: var(--border) transparent;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    @apply bg-background font-sans text-sm text-foreground;
+    font-variant-numeric: tabular-nums;
+  }
+  ::selection {
+    @apply bg-brand/25;
+  }
+  :where(a, summary, button, [role="button"]):focus-visible {
+    @apply rounded-sm outline-2 outline-offset-2 outline-ring;
+  }
+}
+
+/* ---------- View transitions ----------
+   Navigations move only the page: the header stays put. A page fades in from
+   slightly below; a note's title morphs from the list into the page; the
+   theme switch crossfades the whole document. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}
+:root[data-theme-switching]::view-transition-old(root) {
+  animation: 220ms ease-out both vt-fade reverse;
+}
+:root[data-theme-switching]::view-transition-new(root) {
+  animation: 220ms ease-out both vt-fade;
+}
+
+::view-transition-group(header) {
+  z-index: 1;
+  animation: none;
+}
+::view-transition-old(header) {
+  animation: none;
+  opacity: 0;
+}
+::view-transition-new(header) {
+  animation: none;
+}
+:root[data-theme-switching]::view-transition-old(header) {
+  opacity: 1;
+  animation: 220ms ease-out both vt-fade reverse;
+}
+:root[data-theme-switching]::view-transition-new(header) {
+  animation: 220ms ease-out both vt-fade;
+}
+
+/* The old page goes at once and only the new one moves. */
+::view-transition-old(.page-out) {
+  animation: none;
+  opacity: 0;
+}
+::view-transition-new(.page-in) {
+  animation:
+    200ms ease-out both vt-fade,
+    260ms var(--ease) both vt-rise;
+}
+::view-transition-group(.page-in),
+::view-transition-group(.page-out) {
+  animation: none;
+}
+
+/* A note's title, from its row into the page: only the new text is drawn,
+   scaled from the old box, so it stays crisp. */
+::view-transition-group(.morph) {
+  animation-duration: 380ms;
+  animation-timing-function: var(--ease);
+}
+::view-transition-old(.morph) {
+  animation: none;
+  opacity: 0;
+}
+::view-transition-new(.morph) {
+  animation: none;
+  width: auto;
+  height: 100%;
+}
+
+@keyframes vt-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes vt-rise {
+  from {
+    transform: translateY(6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ---------- Rendered markdown ---------- */
+
+.markdown {
+  font-size: 15.5px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.markdown > * + * {
+  margin-top: 1em;
+}
+.markdown :where(h1, h2, h3, h4, h5, h6) {
+  position: relative;
+  font-family: var(--font-serif);
+  font-weight: 400;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  margin-top: 1.8em;
+  scroll-margin-top: 5rem;
+}
+.markdown > :first-child {
+  margin-top: 0;
+}
+.markdown h1 { font-size: 32px; }
+.markdown h2 { font-size: 26px; padding-bottom: 0.3em; box-shadow: inset 0 -1px 0 var(--rule); }
+.markdown h3 { font-size: 20px; }
+.markdown h4 { font-size: 17px; }
+.markdown h5 { font-size: 15.5px; font-style: italic; }
+.markdown h6 { font-size: 15.5px; font-style: italic; color: var(--muted-foreground); }
+.markdown .anchor {
+  margin-left: 0.35em;
+  font-family: var(--font-mono);
+  font-size: 0.6em;
+  color: var(--faint);
+  text-decoration: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.markdown :where(h1, h2, h3, h4, h5, h6):hover .anchor,
+.markdown .anchor:focus-visible {
+  opacity: 1;
+}
+.markdown a {
+  color: var(--foreground);
+  text-decoration: underline;
+  text-decoration-color: var(--border);
+  text-underline-offset: 4px;
+  transition: text-decoration-color 0.2s;
+}
+.markdown a:hover {
+  text-decoration-color: var(--brand);
+}
+.markdown a.wikilink {
+  color: var(--brand);
+  text-decoration-color: color-mix(in srgb, var(--brand) 35%, transparent);
+}
+.markdown a.wikilink:hover {
+  text-decoration-color: var(--brand);
+}
+.markdown a.wikilink-missing {
+  color: var(--muted-foreground);
+  text-decoration-style: dashed;
+  text-decoration-color: var(--faint);
+}
+.markdown a.tag {
+  font-family: var(--font-mono);
+  font-size: 0.8em;
+  color: var(--brand);
+  text-decoration: none;
+  background: color-mix(in srgb, var(--brand) 9%, transparent);
+  border-radius: 2px;
+  padding: 0.1em 0.4em;
+  transition: background 0.2s;
+}
+.markdown a.tag:hover {
+  background: color-mix(in srgb, var(--brand) 16%, transparent);
+}
+.markdown strong { font-weight: 600; }
+.markdown ul { list-style: none; padding-left: 1.25em; }
+.markdown ul > li { position: relative; }
+.markdown ul > li::before { content: "-"; position: absolute; left: -1.1em; color: var(--faint); }
+.markdown ol { list-style: decimal; padding-left: 1.4em; }
+.markdown ol > li::marker { font-family: var(--font-mono); font-size: 0.85em; color: var(--faint); }
+.markdown li + li, .markdown li > ul, .markdown li > ol { margin-top: 0.3em; }
+.markdown li.task-list-item::before { content: none; }
+.markdown li.task-list-item { margin-left: -1.25em; }
+/* Task boxes using the app’s theme: a hairline square, filled with the accent and a tick when done. */
+.markdown li.task-list-item input,
+input.checkbox {
+  flex-shrink: 0;
+  appearance: none;
+  display: inline-grid;
+  place-content: center;
+  width: 15px;
+  height: 15px;
+  margin: 0 0.6em 0 0;
+  vertical-align: -2px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--field);
+  transition: background-color 0.15s, border-color 0.15s, transform 0.15s var(--ease);
+}
+.markdown li.task-list-item input::after,
+input.checkbox::after {
+  content: "";
+  width: 9px;
+  height: 9px;
+  background: var(--background);
+  clip-path: polygon(14% 52%, 0 66%, 38% 100%, 100% 24%, 86% 10%, 38% 72%);
+  transform: scale(0);
+  transition: transform 0.15s var(--ease);
+}
+input.checkbox { margin: 0; vertical-align: middle; }
+.markdown li.task-list-item input:checked,
+input.checkbox:checked { background: var(--brand); border-color: var(--brand); }
+.markdown li.task-list-item input:checked::after,
+input.checkbox:checked::after { transform: scale(1); }
+.markdown input.task-toggle,
+input.checkbox { cursor: pointer; }
+.markdown input.task-toggle:hover,
+input.checkbox:hover { border-color: var(--ring); }
+.markdown input.task-toggle:focus-visible,
+input.checkbox:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.markdown input.task-toggle:active { transform: scale(0.85); }
+.markdown input.task-toggle:disabled { cursor: progress; opacity: 0.6; }
+.markdown li.task-list-item:has(> input:checked) { color: var(--muted-foreground); }
+.markdown blockquote {
+  border-left: 1px solid var(--border);
+  padding-left: 1.1em;
+  color: var(--muted-foreground);
+  font-family: var(--font-serif);
+  font-style: italic;
+}
+.markdown hr { border: 0; border-top: 1px solid var(--rule); margin: 2.5em 0; }
+.markdown img, .markdown video { max-width: 100%; border-radius: var(--radius-lg); border: 1px solid var(--rule); }
+.markdown audio { width: 100%; }
+.markdown :not(pre) > code {
+  font-family: var(--font-mono);
+  font-size: 0.84em;
+  background: var(--secondary);
+  border-radius: 2px;
+  padding: 1px 5px;
+}
+.markdown kbd {
+  font-family: var(--font-mono);
+  font-size: 0.78em;
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: 3px;
+  padding: 0.1em 0.4em;
+  background: var(--card);
+}
+.markdown mark {
+  background: color-mix(in srgb, var(--brand) 18%, transparent);
+  color: inherit;
+  padding: 0 2px;
+}
+.markdown .table-wrap { overflow-x: auto; }
+.markdown table { border-collapse: collapse; font-size: 14px; min-width: 50%; }
+.markdown th {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted-foreground);
+  text-align: left;
+  padding: 0 0.9em 0.6em 0;
+  border-bottom: 1px solid var(--border);
+}
+.markdown td { padding: 0.55em 0.9em 0.55em 0; border-bottom: 1px solid var(--rule); }
+.markdown details {
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  padding: 0.6em 0;
+}
+.markdown details > summary {
+  cursor: pointer;
+  list-style: none;
+  font-weight: 500;
+}
+/* The + is drawn, not typed: a square box with the cross in its exact center, so it turns in place
+   (a glyph sits left in its box and low on the line, so it swung around and dropped). */
+.markdown details > summary::before {
+  content: "";
+  display: inline-block;
+  width: 0.6em;
+  height: 0.6em;
+  margin-right: 0.6em; /* 0.6 + 0.6 = the 1.2em the content is indented */
+  vertical-align: middle;
+  color: var(--faint);
+  background:
+    linear-gradient(currentColor, currentColor) center / 100% 1.5px no-repeat,
+    linear-gradient(currentColor, currentColor) center / 1.5px 100% no-repeat;
+  transition: transform 0.25s var(--ease);
+}
+.markdown details[open] > summary::before { transform: rotate(45deg); }
+/* Opening and closing slide the height both ways, so what follows moves smoothly instead of jumping.
+   The gap under the summary lives inside the sliding part; browsers without ::details-content just toggle. */
+.markdown details::details-content {
+  display: flow-root; /* keeps the first child's margin inside, so it slides too instead of snapping at the end */
+  block-size: 0;
+  overflow: clip;
+  opacity: 0;
+  transition: block-size 0.28s var(--ease), opacity 0.2s ease, content-visibility 0.28s allow-discrete;
+}
+.markdown details[open]::details-content { block-size: auto; opacity: 1; }
+.markdown details > :not(summary) { margin-left: 1.2em; }
+.markdown details > summary + * { margin-top: 0.5em; }
+.markdown details > :last-child { margin-bottom: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .markdown details::details-content { transition: none; }
+}
+@keyframes md-reveal {
+  from { opacity: 0; transform: translateY(-3px); }
+}
+.markdown .katex-display { overflow-x: auto; overflow-y: hidden; padding: 0.25em 0; }
+/* A diagram sits in a ruled frame, like a figure in Zeroko's docs. */
+.markdown .mermaid {
+  display: flex;
+  justify-content: center;
+  overflow-x: auto;
+  padding: 1.5rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--card) 45%, transparent);
+}
+.markdown .mermaid svg { max-width: 100%; height: auto; }
+.markdown .mermaid:not([data-processed]) { white-space: pre; font-family: var(--font-mono); font-size: 12.5px; color: var(--faint); }
+.markdown .mermaid[data-processed] { animation: 300ms ease-out both md-reveal; }
+.markdown .footnotes { font-size: 13.5px; color: var(--muted-foreground); border-top: 1px solid var(--rule); padding-top: 1em; }
+.markdown .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+/* GitHub-style alerts (> [!NOTE]): a rule beside the text and a kicker. */
+.markdown .alert {
+  --alert: var(--brand);
+  border-left: 1px solid var(--alert);
+  padding: 0.1em 0 0.1em 1.1em;
+}
+.markdown .alert > * + * { margin-top: 0.4em; }
+.markdown .alert-title {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--alert);
+}
+.markdown .alert-tip { --alert: var(--ok); }
+.markdown .alert-important { --alert: var(--info); }
+.markdown .alert-warning { --alert: var(--warn); }
+.markdown .alert-caution { --alert: var(--destructive); }
+
+/* Code blocks: a ruled frame on the card ground. Shiki emits only
+   --shiki-light/--shiki-dark; light-dark() picks one per color scheme. */
+.markdown pre.shiki {
+  position: relative;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.75;
+  padding: 1em 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--card) !important;
+  overflow-x: auto;
+}
+.markdown pre.shiki code { display: block; min-width: fit-content; }
+.markdown pre.shiki .line { display: inline-block; width: 100%; padding: 0 1.1em; }
+.markdown pre.shiki,
+.markdown pre.shiki span {
+  color: light-dark(var(--shiki-light), var(--shiki-dark));
+}
+.markdown pre.shiki .line.highlighted { background: color-mix(in srgb, var(--brand) 10%, transparent); box-shadow: inset 2px 0 0 var(--brand); }
+.markdown pre.shiki .line.diff.add { background: color-mix(in srgb, var(--ok) 11%, transparent); box-shadow: inset 2px 0 0 var(--ok); }
+.markdown pre.shiki .line.diff.remove { background: color-mix(in srgb, var(--destructive) 10%, transparent); box-shadow: inset 2px 0 0 var(--destructive); opacity: 0.75; }
+.markdown .copy-code {
+  position: absolute;
+  top: 0.45em;
+  right: 0.45em;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 0.2em 0.6em;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  color: var(--faint);
+  opacity: 0;
+  transition: opacity 0.2s, color 0.2s;
+}
+.markdown .copy-code:hover { color: var(--foreground); }
+.markdown pre.shiki:hover .copy-code, .markdown .copy-code:focus-visible { opacity: 1; }
+@media (hover: none) { .markdown .copy-code { opacity: 1; } }
+
+/* ---------- Editor (CodeMirror) ---------- */
+.cm-editor { height: 100%; font-size: 15.5px; }
+.cm-editor.cm-focused { outline: none; }
+.cm-editor .cm-scroller { font-family: var(--font-sans); line-height: 1.75; }
+.cm-editor .cm-content { padding: 0 0 40vh; caret-color: var(--brand); }
+.cm-editor .cm-line { padding: 0; }
+.cm-editor .cm-cursor { border-left-color: var(--brand); border-left-width: 2px; }
+.cm-editor .cm-selectionBackground,
+.cm-editor.cm-focused .cm-selectionBackground,
+.cm-editor ::selection {
+  background: color-mix(in srgb, var(--brand) 22%, transparent) !important;
+}
+.cm-editor .cm-placeholder { color: var(--faint); font-family: var(--font-serif); font-style: italic; }
+.cm-editor.font-mono .cm-scroller { font-family: var(--font-mono); font-size: 14px; }
+/* Mono is a plain text editor: headings keep their size but not the serif. */
+.cm-editor.font-mono .cm-content * { font-family: var(--font-mono) !important; }
+/* Completion menu for [[links]] and #tags, in the popover style. */
+.cm-tooltip.cm-tooltip-autocomplete {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+  box-shadow: 0 8px 30px -12px rgb(0 0 0 / 0.35);
+  padding: 4px;
+  animation: 150ms ease-out both md-reveal;
+}
+/* !important: CodeMirror's base theme sets monospace with a more specific scoped selector. */
+.cm-tooltip.cm-tooltip-autocomplete > ul { font-family: var(--font-sans) !important; max-height: 16em; }
+.cm-tooltip.cm-tooltip-autocomplete > ul > li { padding: 4px 10px; border-radius: var(--radius-md); font-size: 13px; color: var(--foreground); }
+.cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] { background: var(--secondary); color: var(--foreground); }
+.cm-completionDetail { font-family: var(--font-mono); font-size: 11px; color: var(--faint); font-style: normal; margin-left: 0.8em; }
+.cm-completionMatchedText { text-decoration: none; color: var(--brand); }
+.cm-completionIcon { display: none; }
+.cm-editor .cm-line.cm-codeblock { font-family: var(--font-mono); font-size: 13px; background: var(--card); box-shadow: inset 1px 0 0 var(--border); padding: 0 14px; }
+.cm-editor .cm-wikilink, .cm-editor .cm-wikilink * { color: var(--brand) !important; }
+.cm-editor .cm-tag { color: var(--brand); background: color-mix(in srgb, var(--brand) 9%, transparent); border-radius: 2px; }
+
+/* Print and "Save as PDF": always the light palette on white paper, full width, nothing interactive,
+   code wrapped instead of cut off, and blocks kept whole across pages. */
+@media print {
+  @page { margin: 16mm 15mm; }
+  :root, :root[data-theme] { color-scheme: light !important; }
+  html, body { background: #fff !important; }
+  .no-print, .markdown .copy-code, .markdown .anchor, [aria-live] { display: none !important; }
+  main { max-width: none !important; padding: 0 !important; }
+  article, main > div { max-width: none !important; }
+  * { animation: none !important; transition: none !important; }
+  /* Boxes, ticks and highlights are part of the content: print their backgrounds. */
+  .markdown, .markdown * { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  .markdown { font-size: 11pt; }
+  .markdown pre, .markdown pre.shiki { white-space: pre-wrap; overflow: visible; word-break: break-word; }
+  .markdown pre.shiki .line { display: inline; padding: 0; }
+  .markdown pre.shiki code { min-width: 0; padding: 0 1.1em; }
+  .markdown .table-wrap, .markdown .katex-display { overflow: visible; }
+  .markdown pre, .markdown blockquote, .markdown table, .markdown img, .markdown video, .markdown .mermaid, .markdown .alert, .markdown details { break-inside: avoid; }
+  .markdown :where(h1, h2, h3, h4) { break-after: avoid; }
+  /* Collapsed sections print open (the screen state comes back after printing). */
+  .markdown details::details-content { block-size: auto !important; opacity: 1 !important; content-visibility: visible !important; }
+  .markdown details > summary::before { content: none; }
+  /* External links keep their address on paper. */
+  .markdown a[href^="http"]:not(.wikilink)::after { content: " (" attr(href) ")"; font-size: 0.8em; color: var(--muted-foreground); word-break: break-all; }
+  .markdown video, .markdown audio { display: none; }
+}

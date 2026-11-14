@@ -1,0 +1,14 @@
+services:
+  marknotes:
+    image: ghcr.io/leonardoiz/marknotes:latest
+    restart: unless-stopped
+    # Run as the owner of ./data so notes stay editable from the host (1000 is the usual first user).
+    user: "${NOTES_UID:-1000}:${NOTES_GID:-1000}"
+    ports:
+      - "3000:3000"
+    # Sign-in and agents are set up in the app on first start: the setup code is in `docker compose logs`.
+    # environment:
+    #   NOTES_URL: https://notes.example.com
+    volumes:
+      # Your notes as plain files, plus the app's state and the downloaded model in .notes/
+      - ./data:/data
