@@ -10,6 +10,8 @@ const nextConfig: NextConfig = {
       "node_modules/onnxruntime-node/{package.json,dist/**}",
       "node_modules/onnxruntime-common/**",
       `node_modules/onnxruntime-node/bin/napi-v6/${process.platform}/${process.arch}/**`,
+      // shiki → oniguruma-to-es imports these via `exports` pointing at src/ (not dist/): the tracer misses them.
+      "node_modules/{regex,regex-recursion,regex-utilities}/{package.json,src/**}",
     ],
   },
   outputFileTracingExcludes: {
